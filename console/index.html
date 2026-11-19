@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clipwatch</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2312111a'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23f0a24a'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: oklch(13% 0.014 265);
+  --paper-2: oklch(16.5% 0.015 265);
+  --paper-3: oklch(20% 0.016 265);
+  --ink: oklch(96% 0.006 262);
+  --ink-2: oklch(86% 0.01 262);
+  --muted: oklch(68% 0.012 262);
+  --rule: oklch(96% 0.006 262 / 0.08);
+  --rule-2: oklch(96% 0.006 262 / 0.14);
+  --brass: oklch(76% 0.17 50);
+  --brass-ink: oklch(17% 0.03 50);
+  --coral: oklch(68% 0.16 18);
+  --emit: oklch(76% 0.17 50 / 0.05);
+  --ok: oklch(75% 0.11 150);
+  --warn: oklch(78% 0.14 75);
+  --danger: oklch(66% 0.18 25);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "Geist", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0; min-height: 100vh; color: var(--ink-2); font: 15px/1.55 var(--sans);
+  background:
+    radial-gradient(1200px 520px at 78% -12%, oklch(76% 0.17 50 / 0.07), transparent 70%),
+    var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: oklch(76% 0.17 50 / 0.35); color: var(--ink); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--paper-3); border-radius: 10px; border: 2px solid var(--paper); }
+* { scrollbar-color: var(--paper-3) transparent; caret-color: var(--brass); }
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--rule-2); }
+a:hover { text-decoration-color: var(--brass); }
+button, input, select { font: inherit; color: inherit; }
+.tab { font-variant-numeric: tabular-nums; }
+.readout { font: 500 10.5px/1.4 var(--mono); letter-spacing: 0.10em; text-transform: uppercase; color: var(--muted); }
+svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--rule-2); background: transparent; color: var(--ink); cursor: pointer; font-weight: 500;
+  transition: background 220ms var(--ease), border-color 220ms var(--ease), color 220ms var(--ease); white-space: nowrap; }
+.btn:hover { background: var(--paper-3); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.btn.primary { background: var(--brass); color: var(--brass-ink); border-color: transparent; }
+.btn.primary:hover { background: oklch(80% 0.16 55); }
+.btn.quiet { border-color: transparent; background: var(--paper-3); }
+.btn.quiet:hover { background: oklch(24% 0.016 265); }
+.btn.danger { border-color: oklch(66% 0.18 25 / 0.5); color: oklch(78% 0.12 25); }
+.btn.danger:hover { background: oklch(66% 0.18 25 / 0.14); }
+.btn.sm { height: 32px; padding: 0 12px; font-size: 13.5px; }
+.iconbtn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; border: 0; background: transparent;
+  color: var(--muted); cursor: pointer; transition: background 220ms var(--ease), color 220ms var(--ease); }
+.iconbtn:hover { background: var(--paper-3); color: var(--ink); }
+
+/* shell */
+header.bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 20px; padding: 14px clamp(16px, 3vw, 32px);
+  background: oklch(13% 0.014 265 / 0.82); backdrop-filter: blur(14px); border-bottom: 1px solid var(--rule); }
+.mark { display: flex; align-items: center; gap: 10px; font: 400 26px/1 var(--serif); color: var(--ink); letter-spacing: -0.02em; }
+.lens { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--rule-2); display: grid; place-items: center; }
+.lens i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background 400ms var(--ease), box-shadow 400ms var(--ease); }
+.lens.on i { background: var(--brass); box-shadow: 0 0 0 4px oklch(76% 0.17 50 / 0.16), 0 0 14px 2px oklch(80% 0.16 50 / 0.5); animation: pulse 4s var(--ease) infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px oklch(76% 0.17 50 / 0.06), 0 0 18px 4px oklch(80% 0.16 50 / 0.35); } }
+.bar .state { margin-left: auto; text-align: right; }
+.bar .state b { display: block; color: var(--ink); font: 500 13px/1.3 var(--sans); }
+main { padding: clamp(20px, 3vw, 32px) clamp(16px, 3vw, 32px) 64px; }
+.notice { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin-bottom: 20px; border-radius: 10px;
+  background: oklch(78% 0.14 75 / 0.08); border: 1px solid oklch(78% 0.14 75 / 0.25); color: oklch(88% 0.08 75); max-width: 900px; }
+.notice svg { margin-top: 3px; color: var(--warn); }
+.notice code { font: 13px var(--mono); color: var(--ink); }
+
+/* setup */
+.setup { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 5vw, 72px); max-width: 1180px; margin: clamp(8px, 4vh, 48px) auto 0; }
+.setup h1 { font: 400 clamp(2.6rem, 4.6vw + 0.5rem, 4.6rem)/1.02 var(--serif); letter-spacing: -0.032em; color: var(--ink); margin: 0 0 18px; text-wrap: balance; }
+.setup h1 em { font-style: normal; color: var(--coral); }
+.setup .lede { color: var(--ink-2); max-width: 46ch; margin: 0 0 28px; }
+.field { display: grid; gap: 8px; margin-bottom: 20px; }
+.field label { color: var(--ink); font-weight: 500; font-size: 14px; }
+.field small { color: var(--muted); font-size: 13px; }
+.input { height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--rule-2); background: var(--paper-2); color: var(--ink);
+  transition: border-color 220ms var(--ease), background 220ms var(--ease); width: 100%; min-width: 0; }
+.input::placeholder { color: oklch(62% 0.012 262); }
+.input:hover { border-color: oklch(96% 0.006 262 / 0.22); }
+.input:focus { outline: none; border-color: var(--brass); background: var(--paper-3); }
+.panel { background: var(--paper-2); border: 1px solid var(--rule); border-radius: 12px; padding: 20px;
+  box-shadow: inset 0 1px 0 oklch(96% 0.006 262 / 0.04), 0 24px 60px -30px oklch(0% 0 0 / 0.7); position: relative; }
+.adder { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--paper); border: 1px solid var(--rule); height: 44px; align-items: center; }
+.seg button { height: 36px; min-width: 46px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer;
+  font: 500 11px var(--mono); letter-spacing: 0.1em; transition: background 220ms var(--ease), color 220ms var(--ease); }
+.seg button[aria-pressed="true"] { background: var(--paper-3); color: var(--ink); }
+.seg.small { height: 32px; padding: 2px; }
+.seg.small button { height: 26px; min-width: 38px; padding: 0 8px; }
+.err { color: oklch(78% 0.12 25); font-size: 13px; min-height: 20px; margin: 8px 0 0; }
+.list { list-style: none; margin: 16px 0 0; padding: 0; border-top: 1px solid var(--rule); }
+.list li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--rule); animation: fade 400ms var(--ease); }
+.list .who { min-width: 0; }
+.list .who b { display: block; color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .who span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plat { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--paper-3); color: var(--ink-2); font: 600 11px var(--mono); }
+.empty-list { padding: 22px 0 6px; color: var(--muted); font-size: 14px; }
+.suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; align-items: center; }
+.chip { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--rule-2); background: transparent; color: var(--ink-2); cursor: pointer; font-size: 13px;
+  transition: background 220ms var(--ease), border-color 220ms var(--ease), color 220ms var(--ease); }
+.chip:hover { background: var(--paper-3); color: var(--ink); }
+.chip[aria-pressed="true"] { background: oklch(76% 0.17 50 / 0.14); border-color: oklch(76% 0.17 50 / 0.45); color: var(--ink); }
+.consent { display: flex; gap: 12px; align-items: flex-start; margin: 22px 0 18px; color: var(--ink-2); font-size: 14px; cursor: pointer; }
+.consent input { appearance: none; width: 20px; height: 20px; margin: 1px 0 0; border-radius: 6px; border: 1.5px solid var(--rule-2); background: var(--paper); flex: none; display: grid; place-items: center; cursor: pointer; }
+.consent input:checked { background: var(--brass); border-color: var(--brass); }
+.consent input:checked::after { content: ""; width: 10px; height: 6px; border: 2px solid var(--brass-ink); border-top: 0; border-right: 0; transform: translate(0, -1px) rotate(-45deg); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* watch view */
+.watch { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); align-items: start; }
+aside.side { position: sticky; top: 86px; display: grid; gap: 16px; }
+.side h2, .clips-head h2 { font: 400 28px/1.05 var(--serif); letter-spacing: -0.02em; color: var(--ink); margin: 0; }
+.side .head { display: flex; align-items: baseline; justify-content: space-between; }
+.chan { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+  transition: background 220ms var(--ease), border-color 220ms var(--ease); background: transparent; text-align: left; width: 100%; }
+.chan:hover { background: var(--paper-2); }
+.chan[aria-pressed="true"] { background: var(--paper-2); border-color: var(--rule-2); }
+.chan b { color: var(--ink); font-weight: 500; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(45% 0.01 262); }
+.dot.live { background: var(--brass); box-shadow: 0 0 10px 1px oklch(80% 0.16 50 / 0.55); }
+.dot.done { background: var(--ok); }
+.count { font: 500 12px var(--mono); color: var(--muted); }
+.gamebox { padding: 14px 16px; }
+.gamebox b { display: block; color: var(--ink); font-weight: 500; margin-top: 4px; }
+details.log { margin-top: 4px; }
+details.log summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; color: var(--muted); padding: 6px 0; }
+details.log summary::-webkit-details-marker { display: none; }
+details.log summary:hover { color: var(--ink); }
+details.log pre { margin: 8px 0 0; max-height: 280px; overflow: auto; padding: 12px; border-radius: 8px; background: var(--paper); border: 1px solid var(--rule);
+  font: 11.5px/1.6 var(--mono); color: var(--ink-2); white-space: pre-wrap; word-break: break-word; }
+
+.clips-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 20px; margin-bottom: 20px; }
+.clips-head .sub { margin-top: 6px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(214px, 1fr)); gap: 20px; }
+.clip { display: grid; gap: 10px; animation: fade 500ms var(--ease) both; }
+.frame { position: relative; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; background: var(--paper-2); border: 1px solid var(--rule);
+  transition: transform 220ms var(--ease), box-shadow 220ms var(--ease), border-color 220ms var(--ease); }
+.clip:hover .frame { transform: translateY(-4px); border-color: var(--rule-2); box-shadow: 0 18px 40px -18px oklch(0% 0 0 / 0.8), 0 0 0 1px oklch(76% 0.17 50 / 0.12); }
+.frame video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+.frame .play { position: absolute; inset: 0; display: grid; place-items: center; border: 0; background: linear-gradient(180deg, transparent 55%, oklch(10% 0.01 265 / 0.75)); cursor: pointer; color: var(--ink); }
+.frame .play span { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: oklch(13% 0.014 265 / 0.6); backdrop-filter: blur(6px); border: 1px solid var(--rule-2);
+  transition: background 220ms var(--ease), transform 220ms var(--ease); }
+.frame .play:hover span { background: var(--brass); color: var(--brass-ink); }
+.frame .play svg.i { width: 20px; height: 20px; margin-left: 2px; }
+.frame .stamp { position: absolute; left: 10px; bottom: 10px; pointer-events: none; color: var(--ink); opacity: 0.85; }
+.clip h3 { margin: 0; font: 500 14.5px/1.35 var(--sans); color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.clip .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.clip .tools { display: flex; gap: 2px; }
+.empty { border: 1px dashed var(--rule-2); border-radius: 12px; padding: clamp(28px, 6vw, 64px); max-width: 640px; }
+.empty h3 { font: 400 30px/1.1 var(--serif); letter-spacing: -0.02em; color: var(--ink); margin: 0 0 10px; }
+.empty p { margin: 0; color: var(--ink-2); max-width: 52ch; }
+.more { margin-top: 28px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; padding: 10px 16px; border-radius: 999px;
+  background: var(--paper-3); color: var(--ink); border: 1px solid var(--rule-2); transition: opacity 220ms var(--ease), transform 220ms var(--ease); font-size: 14px; z-index: 20; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } }
+[hidden] { display: none !important; }
+
+@media (max-width: 900px) {
+  .setup, .watch { grid-template-columns: 1fr; }
+  aside.side { position: static; }
+  .bar .state span.readout { display: none; }
+}
+@media (max-width: 520px) {
+  .adder { grid-template-columns: 1fr auto; }
+  .adder .btn { grid-column: 1 / -1; justify-content: center; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  header.bar { gap: 12px; }
+  .bar .state b { font-size: 12px; }
+  .bar #runBtn .lbl { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3zM12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24"><path d="m5 8 4 4-4 4M12 17h7"/></symbol>
+</svg>
+
+<header class="bar">
+  <div class="mark"><span class="lens" id="lens"><i></i></span>clipwatch</div>
+  <div class="state"><b id="stateLine">connecting</b><span class="readout tab" id="stateSub"></span></div>
+  <button class="btn sm" id="runBtn" hidden><svg class="i"><use href="#i-play"/></svg><span class="lbl">start watching</span></button>
+</header>
+
+<main>
+  <div class="notice" id="keyNotice" hidden>
+    <svg class="i"><use href="#i-alert"/></svg>
+    <div style="flex:1;min-width:0">Add your Google API key. Clipwatch uses it to check the game and pick clips, so nothing runs on your agent's tokens. It's free:
+      get one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+      <form id="keyForm" class="adder" style="grid-template-columns:1fr auto;margin-top:12px" autocomplete="off">
+        <input class="input" id="keyInput" type="password" placeholder="paste your Google API key" aria-label="Google API key">
+        <button class="btn primary" type="submit">add google api key</button>
+      </form>
+      <p class="err" id="keyErr" role="alert"></p></div>
+  </div>
+
+  <!-- first run + edit lineup -->
+  <section class="setup" id="setup" hidden>
+    <div>
+      <h1 id="setupTitle">who are we <em>watching</em>?</h1>
+      <p class="lede">Add the channels you want clips from. Clipwatch checks every few minutes, starts watching whoever goes live, and cuts vertical Shorts with the streamer's face in frame.</p>
+      <div class="field">
+        <label for="game">only clip this game</label>
+        <input class="input" id="game" placeholder="any game" autocomplete="off">
+        <small>Clips are cut only while this game is on screen. Leave it empty to clip any game.</small>
+      </div>
+    </div>
+    <div class="panel">
+      <form id="addForm" class="adder" autocomplete="off">
+        <input class="input" id="chanInput" placeholder="twitch name, @youtube handle or link" aria-label="channel">
+        <div class="seg" role="group" aria-label="clip language" id="langSeg">
+          <button type="button" data-lang="en" aria-pressed="true">EN</button>
+          <button type="button" data-lang="es" aria-pressed="false">ES</button>
+        </div>
+        <button class="btn primary" type="submit"><svg class="i"><use href="#i-plus"/></svg>add</button>
+      </form>
+      <p class="err" id="addErr" role="alert"></p>
+      <div class="suggest" id="suggest"><span class="readout">quick add</span></div>
+      <ul class="list" id="draftList"></ul>
+      <label class="consent">
+        <input type="checkbox" id="rights">
+        <span>I'm allowed to clip and repost these channels' streams (they're mine, or I have the streamer's permission).</span>
+      </label>
+      <div class="actions">
+        <button class="btn primary" id="saveStart"><svg class="i"><use href="#i-play"/></svg>save and start watching</button>
+        <button class="btn" id="saveOnly">save only</button>
+        <button class="btn quiet" id="cancelEdit" hidden>cancel</button>
+      </div>
+      <p class="err" id="saveErr" role="alert"></p>
+    </div>
+  </section>
+
+  <!-- running view -->
+  <section class="watch" id="watch" hidden>
+    <aside class="side">
+      <div class="head"><h2>lineup</h2><button class="btn sm quiet" id="editBtn"><svg class="i"><use href="#i-edit"/></svg>edit</button></div>
+      <div id="chanList" role="group" aria-label="filter clips by streamer"></div>
+      <div class="panel gamebox"><span class="readout">game filter</span><b id="gameName"></b></div>
+      <details class="log" id="logBox">
+        <summary class="readout"><svg class="i"><use href="#i-term"/></svg>runner log</summary>
+        <pre id="logPre">nothing yet</pre>
+      </details>
+    </aside>
+    <div>
+      <div class="clips-head">
+        <div><h2 id="clipsTitle">clips</h2><div class="readout tab sub" id="clipsSub"></div></div>
+        <div class="seg small" role="group" aria-label="language" id="langFilter">
+          <button type="button" data-f="all" aria-pressed="true">ALL</button>
+          <button type="button" data-f="en" aria-pressed="false">EN</button>
+          <button type="button" data-f="es" aria-pressed="false">ES</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="empty" id="emptyClips" hidden>
+        <h3>no clips yet</h3>
+        <p id="emptyText">When a streamer in your lineup goes live and plays the game, finished clips land here. The first ones usually show up 15 to 30 minutes after a watch starts.</p>
+      </div>
+      <button class="btn more" id="moreBtn" hidden>show more</button>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SUGGEST = [["kaicenat","en"],["ishowspeed","en"],["xqc","en"],["agent00","en"],["rubius","es"],["djmariio","es"]];
+const PAGE = 48;
+let lineup = { configured: false, game: "", channels: [] };
+let draft = [];
+let draftLang = "en";
+let status = { running: false, jobs: {}, log: [], gemini_key: true };
+let jobStates = {};
+let clips = [];
+let filter = { streamer: null, lang: "all" };
+let shown = PAGE;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Request failed (${r.status}).`);
+  return data;
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function nameOf(url) {
+  try { return new URL(url).pathname.split("/").filter(Boolean)[0].replace(/^@/, "").toLowerCase(); } catch { return url; }
+}
+function platformOf(url) { return /youtu/.test(url) ? "YT" : /kick\.com/.test(url) ? "K" : "TW"; }
+function toUrl(raw) {
+  raw = raw.trim();
+  if (!raw) return "";
+  if (raw.startsWith("@")) return `https://www.youtube.com/${raw}/live`;
+  if (!raw.includes("://")) return raw.split("/")[0].includes(".") ? "https://" + raw : `https://www.twitch.tv/${raw}`;
+  return raw;
+}
+function parseInfo(txt) {
+  const o = {};
+  for (const line of txt.split(/\r?\n/)) { const m = line.match(/^([A-Z]+):\s*(.*)$/); if (m) o[m[1].toLowerCase()] = m[2]; }
+  return o;
+}
+function stampOf(file) { const m = file.match(/_(\d+h\d+m\d+s)_/); return m ? m[1] : ""; }
+
+/* ---------- setup ---------- */
+function renderDraft() {
+  const ul = $("draftList");
+  ul.innerHTML = draft.length ? draft.map((c, i) => `
+    <li>
+      <span class="plat" aria-hidden="true">${platformOf(c.url)}</span>
+      <span class="who"><b>${esc(c.preset || nameOf(c.url))}</b><span class="readout">${esc(c.url.replace(/^https?:\/\/(www\.)?/, ""))}</span></span>
+      <span class="seg small" role="group" aria-label="language for ${esc(nameOf(c.url))}">
+        <button type="button" data-i="${i}" data-l="en" aria-pressed="${c.lang === "en"}">EN</button>
+        <button type="button" data-i="${i}" data-l="es" aria-pressed="${c.lang === "es"}">ES</button>
+      </span>
+      <button class="iconbtn" type="button" data-rm="${i}" aria-label="remove ${esc(nameOf(c.url))}"><svg class="i"><use href="#i-x"/></svg></button>
+    </li>`).join("") : `<li class="empty-list" style="display:block;border:0">No streamers yet. Add one above, or tap a quick add.</li>`;
+  const have = new Set(draft.map((c) => nameOf(c.url)));
+  $("suggest").querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", have.has(b.dataset.n)));
+}
+function addDraft(raw, lang) {
+  const url = toUrl(raw);
+  if (!url) return "Type a channel name or paste a link.";
+  if (!/twitch\.tv|youtube\.com|youtu\.be|kick\.com/.test(url)) return "That isn't a Twitch, YouTube or Kick channel.";
+  if (draft.some((c) => c.url === url)) return `${nameOf(url)} is already in the lineup.`;
+  draft.push({ url, lang, preset: null });
+  renderDraft();
+  return "";
+}
+function openSetup(editing) {
+  $("keyNotice").hidden = status.gemini_key;
+  draft = lineup.channels.map((c) => ({ url: c.url, lang: c.lang, preset: c.preset }));
+  $("game").value = lineup.configured ? lineup.game : (lineup.game || "Grand Theft Auto VI (GTA 6)");
+  $("setupTitle").innerHTML = editing ? "edit the <em>lineup</em>" : "who are we <em>watching</em>?";
+  $("cancelEdit").hidden = !editing;
+  $("rights").checked = false;
+  $("saveErr").textContent = $("addErr").textContent = "";
+  renderDraft();
+  $("watch").hidden = true; $("setup").hidden = false; $("runBtn").hidden = true;
+  $("chanInput").focus();
+}
+async function save(start) {
+  $("saveErr").textContent = "";
+  if (!draft.length) { $("saveErr").textContent = "Add at least one streamer first."; return; }
+  if (start && !$("rights").checked) { $("saveErr").textContent = "Tick the box to confirm you may clip these channels."; return; }
+  try {
+    lineup = await api("/api/console/lineup", { method: "PUT", body: JSON.stringify({ game: $("game").value, channels: draft }) });
+    if (start) await api("/api/console/runner/start", { method: "POST", body: JSON.stringify({ i_have_rights: true }) });
+    toast(start ? "Saved. Watching for live streams." : "Lineup saved.");
+    await refresh(); showWatch();
+  } catch (e) { $("saveErr").textContent = e.message; }
+}
+
+/* ---------- running view ---------- */
+function showWatch() { $("setup").hidden = true; $("watch").hidden = false; renderAll(); }
+function chanState(name) {
+  const job = status.jobs[name];
+  const s = job && jobStates[job];
+  if (s === "processing" || s === "queued") return ["live", "watching live"];
+  if (job && s) return ["done", "last stream done"];
+  return ["", "waiting to go live"];
+}
+function renderChannels() {
+  const counts = {};
+  clips.forEach((c) => (counts[c.streamer] = (counts[c.streamer] || 0) + 1));
+  const rows = [{ name: null, label: "all streamers", sub: `${lineup.channels.length} in lineup`, dot: "", n: clips.length }]
+    .concat(lineup.channels.map((c) => { const [dot, sub] = chanState(c.name); return { name: c.name, label: c.name, sub: `${c.lang} · ${sub}`, dot, n: counts[c.name] || 0 }; }));
+  $("chanList").innerHTML = rows.map((r) => `
+    <button class="chan" type="button" data-s="${esc(r.name ?? "")}" aria-pressed="${filter.streamer === r.name}">
+      <span class="dot ${r.dot}" aria-hidden="true"></span>
+      <span style="min-width:0"><b>${esc(r.label)}</b><span class="readout">${esc(r.sub)}</span></span>
+      <span class="count tab">${r.n}</span>
+    </button>`).join("");
+  $("gameName").textContent = lineup.game || "any game";
+}
+function renderHeader() {
+  const live = lineup.channels.filter((c) => chanState(c.name)[0] === "live").length;
+  $("lens").classList.toggle("on", status.running);
+  $("stateLine").textContent = !lineup.configured ? "no streamers yet" : status.running ? (live ? `watching ${live} live` : "waiting for a stream") : "stopped";
+  $("stateSub").textContent = lineup.configured ? `${lineup.channels.length} channels · ${clips.length} clips` : "";
+  const b = $("runBtn");
+  b.hidden = !lineup.configured || !$("setup").hidden;
+  b.className = status.running ? "btn sm danger" : "btn sm primary";
+  b.innerHTML = status.running ? `<svg class="i"><use href="#i-stop"/></svg><span class="lbl">stop</span>` : `<svg class="i"><use href="#i-play"/></svg><span class="lbl">start watching</span>`;
+  $("keyNotice").hidden = status.gemini_key;
+  $("logPre").textContent = status.log.length ? status.log.join("\n") : "nothing yet";
+}
+function visibleClips() {
+  return clips.filter((c) => (!filter.streamer || c.streamer === filter.streamer) && (filter.lang === "all" || c.lang === filter.lang));
+}
+function renderClips() {
+  const list = visibleClips();
+  $("clipsTitle").textContent = filter.streamer ? `${filter.streamer}` : "clips";
+  $("clipsSub").textContent = `${list.length} ${list.length === 1 ? "clip" : "clips"} · newest first`;
+  $("emptyClips").hidden = list.length > 0;
+  $("emptyText").textContent = clips.length
+    ? "Nothing matches this filter. Pick another streamer or language."
+    : status.running
+      ? "Watching. When a streamer in your lineup is live and the game is on screen, finished clips land here, usually 15 to 30 minutes after a watch starts."
+      : "The runner is stopped. Press start watching, then clips from live streams land here.";
+  const slice = list.slice(0, shown);
+  $("grid").innerHTML = slice.map((c, i) => {
+    const info = parseInfo(c.info);
+    const title = info.title || c.file.replace(/\.mp4$/, "").replace(/^[\d-]+_\d+h\d+m\d+s_/, "").replace(/-/g, " ");
+    return `<article class="clip" style="animation-delay:${Math.min(i, 12) * 30}ms">
+      <div class="frame">
+        <video preload="metadata" playsinline src="${esc(c.src)}#t=0.5"></video>
+        <button class="play" type="button" data-play aria-label="play ${esc(title)}"><span><svg class="i"><use href="#i-play"/></svg></span></button>
+        <span class="stamp readout tab">${esc(stampOf(c.file))}</span>
+      </div>
+      <h3 title="${esc(title)}">${esc(title)}</h3>
+      <div class="meta">
+        <span class="readout">${esc(c.streamer)} · ${esc(c.lang)}</span>
+        <span class="tools">
+          <button class="iconbtn" type="button" data-copy="${clips.indexOf(c)}" aria-label="copy post text"><svg class="i"><use href="#i-copy"/></svg></button>
+          <a class="iconbtn" href="${esc(c.src)}" download aria-label="download clip"><svg class="i"><use href="#i-down"/></svg></a>
+        </span>
+      </div>
+    </article>`;
+  }).join("");
+  $("moreBtn").hidden = list.length <= shown;
+}
+function renderAll() { renderHeader(); renderChannels(); renderClips(); }
+
+async function pollJobs() {
+  const ids = [...new Set(Object.values(status.jobs))];
+  await Promise.all(ids.map(async (id) => {
+    try { const r = await fetch(`/api/status/${id}`); jobStates[id] = r.ok ? (await r.json()).status : "gone"; } catch { /* backend busy */ }
+  }));
+}
+async function refresh() {
+  [lineup, status] = await Promise.all([api("/api/console/lineup"), api("/api/console/status")]);
+  const fresh = await api("/api/console/clips?limit=2000");
+  const changed = fresh.length !== clips.length || fresh[0]?.src !== clips[0]?.src;
+  clips = fresh;
+  await pollJobs();
+  return changed;
+}
+
+/* ---------- events ---------- */
+$("langSeg").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  draftLang = b.dataset.lang;
+  $("langSeg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+});
+$("addForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const err = addDraft($("chanInput").value, draftLang);
+  $("addErr").textContent = err;
+  if (!err) $("chanInput").value = "";
+});
+$("suggest").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  const url = `https://www.twitch.tv/${b.dataset.n}`;
+  const at = draft.findIndex((c) => c.url === url);
+  if (at >= 0) { draft.splice(at, 1); renderDraft(); } else addDraft(url, b.dataset.l);
+});
+$("draftList").addEventListener("click", (e) => {
+  const rm = e.target.closest("[data-rm]");
+  if (rm) { draft.splice(+rm.dataset.rm, 1); renderDraft(); return; }
+  const l = e.target.closest("[data-l]");
+  if (l) { draft[+l.dataset.i].lang = l.dataset.l; renderDraft(); }
+});
+$("keyForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await api("/api/console/key", { method: "POST", body: JSON.stringify({ key: $("keyInput").value }) });
+    $("keyInput").value = ""; $("keyErr").textContent = ""; status.gemini_key = true; renderHeader(); toast("Key saved.");
+  } catch (err) { $("keyErr").textContent = err.message; }
+});
+$("saveStart").onclick = () => save(true);
+$("saveOnly").onclick = () => save(false);
+$("cancelEdit").onclick = showWatch;
+$("editBtn").onclick = () => openSetup(true);
+$("runBtn").onclick = async () => {
+  const b = $("runBtn"); b.disabled = true;
+  try {
+    if (status.running) { await api("/api/console/runner/stop", { method: "POST" }); toast("Stopped. Watches already running finish their stream."); }
+    else {
+      if (!confirm("Start watching? Only continue if you're allowed to clip and repost these channels' streams.")) return;
+      await api("/api/console/runner/start", { method: "POST", body: JSON.stringify({ i_have_rights: true }) });
+      toast("Watching for live streams.");
+    }
+    await refresh(); renderAll();
+  } catch (e) { toast(e.message); } finally { b.disabled = false; }
+};
+$("chanList").addEventListener("click", (e) => {
+  const b = e.target.closest(".chan"); if (!b) return;
+  filter.streamer = b.dataset.s || null; shown = PAGE; renderChannels(); renderClips();
+});
+$("langFilter").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter.lang = b.dataset.f; shown = PAGE;
+  $("langFilter").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  renderClips();
+});
+$("moreBtn").onclick = () => { shown += PAGE; renderClips(); };
+$("grid").addEventListener("click", async (e) => {
+  const p = e.target.closest("[data-play]");
+  if (p) {
+    const v = p.parentElement.querySelector("video");
+    document.querySelectorAll(".frame video").forEach((x) => { if (x !== v) x.pause(); });
+    v.controls = true; v.currentTime = 0; v.play(); p.remove(); return;
+  }
+  const c = e.target.closest("[data-copy]");
+  if (c) {
+    const clip = clips[+c.dataset.copy], info = parseInfo(clip.info);
+    const text = [info.title, info.tiktok || info.instagram].filter(Boolean).join("\n\n") || clip.info;
+    try { await navigator.clipboard.writeText(text); toast("Post text copied."); } catch { toast("Couldn't reach the clipboard."); }
+  }
+});
+
+SUGGEST.forEach(([n, l]) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.dataset.n = n; b.dataset.l = l; b.textContent = n; b.setAttribute("aria-pressed", "false");
+  $("suggest").appendChild(b);
+});
+
+(async function boot() {
+  try {
+    await refresh();
+    if (lineup.configured) showWatch(); else { openSetup(false); renderHeader(); }
+  } catch (e) {
+    $("stateLine").textContent = "backend offline";
+    $("stateSub").textContent = "start it with start.bat";
+  }
+  setInterval(async () => {
+    if (!$("setup").hidden || document.hidden) return;
+    try { const changed = await refresh(); renderHeader(); renderChannels(); if (changed) renderClips(); } catch { $("stateLine").textContent = "backend offline"; }
+  }, 15000);
+})();
+</script>
+</body>
+</html>

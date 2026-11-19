@@ -1,0 +1,75 @@
+# CPU by default (Ryzen / integrated graphics). NVIDIA box:
+#   docker compose --profile gpu up --build backend-gpu frontend
+services:
+  backend:
+    build:
+      context: .
+      args:
+        GPU: "0"
+    container_name: openshorts-backend
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE=int8
+      - FFMPEG_ENCODER=x264
+      - CLIP_WORKERS=2
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - ./output:/app/output
+      # Host Claude login for LLM_PROVIDER=claude_cli (set CLAUDE_HOME in .env).
+      - ${CLAUDE_HOME:-./.claude-home}:/root/.claude
+    restart: unless-stopped
+
+  backend-gpu:
+    profiles: ["gpu"]
+    extends: backend
+    container_name: openshorts-backend-gpu
+    networks:
+      default:
+        aliases: [backend]
+    build:
+      context: .
+      args:
+        GPU: "1"
+    environment:
+      - WHISPER_DEVICE=cuda
+      - WHISPER_COMPUTE=float16
+      - FFMPEG_ENCODER=auto
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, video, compute, utility]
+
+  frontend:
+    build:
+      context: ./dashboard
+      target: dev
+    container_name: openshorts-frontend
+    ports:
+      - "5175:5173"
+    volumes:
+      - ./dashboard:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  renderer:
+    profiles: ["renderer"]
+    build:
+      context: .
+      dockerfile: render-service/Dockerfile
+    container_name: openshorts-renderer
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./output:/output
+    environment:
+      - REMOTION_BUNDLE_PATH=/app/remotion
+      - OUTPUT_DIR=/output
+      - PORT=3100
+    restart: unless-stopped

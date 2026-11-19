@@ -1,0 +1,64 @@
+{
+  "_comment": "Facecam/gameplay boxes are fractions of the 16:9 source (x, y, w, h). Tune them once against a real VOD frame. 'game' is optional (default: centre crop). 'auto' uses the stock openshorts face/screen detector.",
+  "auto": {
+    "label": "Auto (detector)",
+    "lang": "",
+    "cam": null
+  },
+  "kaicenat": {
+    "label": "Kai Cenat (EN, cam mid-left)",
+    "lang": "English",
+    "cam": {
+      "x": 0.0,
+      "y": 0.325,
+      "w": 0.204,
+      "h": 0.205
+    },
+    "game": {
+      "x": 0.245,
+      "y": 0.056,
+      "w": 0.51,
+      "h": 0.888
+    }
+  },
+  "thegrefg": {
+    "label": "TheGrefg (ES, cam auto-detected)",
+    "lang": "Spanish",
+    "cam": null
+  },
+  "rdjavi": {
+    "label": "Rdjavi (ES, cam top-left)",
+    "lang": "Spanish",
+    "cam": {
+      "x": 0.03,
+      "y": 0.032,
+      "w": 0.174,
+      "h": 0.232
+    }
+  },
+  "rubius": {
+    "label": "Rubius (ES, cam auto-detected)",
+    "lang": "Spanish",
+    "cam": null
+  },
+  "djmariio": {
+    "label": "DjMaRiiO (ES, cam auto-detected)",
+    "lang": "Spanish",
+    "cam": null
+  },
+  "ishowspeed": {
+    "label": "IShowSpeed (EN, cam auto-detected)",
+    "lang": "English",
+    "cam": null
+  },
+  "agent00": {
+    "label": "Agent00 (EN, cam auto-detected)",
+    "lang": "English",
+    "cam": null
+  },
+  "xqc": {
+    "label": "xQc (EN, cam auto-detected)",
+    "lang": "English",
+    "cam": null
+  }
+}
